@@ -4,14 +4,45 @@ import './App.css'
 import Books from './Books.json'
 
 class BooksApp extends React.Component {
+
   state = {
-    /**
-     * TODO: Instead of using this state variable to keep track of which page
-     * we're on, use the URL in the browser's address bar. This will ensure that
-     * users can use the browser's back and forward buttons to navigate between
-     * pages, as well as provide a good URL they can bookmark and share.
-     */
     showSearchPage: false
+  };
+
+
+  state = (() => {
+    if (localStorage.getItem("cache")) {
+      return (JSON.parse(localStorage.getItem("cache")))
+    } else {
+      return (Object.assign(this.state, Books))
+    }
+  })();
+ 
+
+  handleChange(args, event) {
+    var shelf = args.shelf;
+    var title = args.title;
+    var book;
+
+    this.state.shelf.forEach(function(e) {
+      if (e.value === shelf) {
+        e.books.forEach( function(b) { 
+          if (b.title === title) {
+            book = b
+          } else;
+        })
+        e.books = e.books.filter(item=>item !== book)
+      } else ;
+    });
+    
+    this.state.shelf.forEach(function(e) {
+      if (e.value === event.target.value) {
+        e.books.push(book)
+      } else ;
+    });
+    
+    localStorage.setItem("cache",JSON.stringify(this.state))
+    this.setState(this.state)
   }
 
   render() {
@@ -36,37 +67,39 @@ class BooksApp extends React.Component {
             </div>
             <div className="list-books-content">
             <div>
-              {Books.shelf.map((e) => {
-                        return (
-                          <div className="bookshelf">
-                            <h2 className="bookshelf-title">{e.name}</h2>
-                            <div className="bookshelf-books">
-                              <ol className="books-grid">
-                                {e.books.map((arg) => {
-                                  return (
-                                  <li>
-                                    <div className="book">
-                                      <div className="book-top">
-                                        <div className="book-cover" style={{width: arg.width, 
-                                                                          height: arg.height,
-                                                                          backgroundImage:"url("+arg.imgurl+")"}}>
-                                        </div>
-                                        <div className="book-shelf-changer">
-                                          <select>
-                                            <option value="move" disabled>Move to...</option>
-                                            <option value="currentlyReading">Currently Reading</option>
-                                            <option value="wantToRead">Want to Read</option>
-                                            <option value="read">Read</option>
-                                            <option value="none">None</option>
-                                          </select>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </li>)
-                                })}
-                              </ol>
-                            </div>
-                          </div>
+              {this.state.shelf.map((e) => {
+                  return (
+                    <div className="bookshelf">
+                      <h2 className="bookshelf-title">{e.name}</h2>
+                      <div className="bookshelf-books">
+                        <ol className="books-grid">
+                          {e.books.map((arg) => {
+                            return (
+                            <li>
+                              <div className="book">
+                                <div className="book-top">
+                                  <div className="book-cover" style={{width: arg.width, 
+                                                                    height: arg.height,
+                                                                    backgroundImage:"url("+arg.imgurl+")"}}>
+                                  </div>
+                                  <div className="book-shelf-changer">
+                                    <select onChange={this.handleChange.bind(this, {title:arg.title, shelf:e.value})} defaultValue="" value={e.value}>
+                                      <option value="move" disabled>Move to...</option>
+                                      <option value="currentlyReading">Currently Reading</option>
+                                      <option value="wantToRead">Want to Read</option>
+                                      <option value="read">Read</option>
+                                      <option value="none">None</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                <div className="book-title">{arg.title}</div>
+                                <div className="book-authors">{arg.author}</div>
+                              </div>
+                            </li>)
+                          })}
+                        </ol>
+                      </div>
+                    </div>
                 )})}
             </div>
             </div>
