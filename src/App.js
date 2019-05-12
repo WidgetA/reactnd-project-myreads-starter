@@ -2,19 +2,16 @@ import React from 'react'
 // import * as BooksAPI from './BooksAPI'
 import './App.css'
 import Books from './Books.json'
+import { Link } from 'react-router-dom'
+import { Route } from "react-router-dom"
 
 class BooksApp extends React.Component {
-
-  state = {
-    showSearchPage: false
-  };
-
 
   state = (() => {
     if (localStorage.getItem("cache")) {
       return (JSON.parse(localStorage.getItem("cache")))
     } else {
-      return (Object.assign(this.state, Books))
+      return (Books)
     }
   })();
  
@@ -47,7 +44,6 @@ class BooksApp extends React.Component {
 
   handleChangeSearchPage() {
     const books = []
-    this.setState({ showSearchPage: true })
     this.state.shelf.forEach(function(e) {
       e.books.forEach( function(b) {
         books.push(b.title)
@@ -70,7 +66,6 @@ class BooksApp extends React.Component {
     this.setState({ searchresult: books })
   }
   clearSearchResult(){
-    this.setState({ showSearchPage: false })
     this.setState({ searchresult: [] })
   }
 
@@ -78,10 +73,10 @@ class BooksApp extends React.Component {
   render() {
     return (
       <div className="app">
-        {this.state.showSearchPage ? (
+        <Route path="/search" exact render={() => (
           <div className="search-books">
             <div className="search-books-bar">
-              <button className="close-search" onClick={ this.clearSearchResult.bind(this) }>Close</button>
+              <Link to="/"><button className="close-search" onClick={ this.clearSearchResult.bind(this) }>Close</button></Link>
               <div className="search-books-input-wrapper">
                 <input type="text" placeholder="Search by title or author" onChange={this.handleChangeSearch.bind(this)}/>
               </div>
@@ -91,7 +86,7 @@ class BooksApp extends React.Component {
                 {this.state.shelf.map((e) => {
                   if (this.state.searchresult){
                     return (
-                    e.books.map((arg) => {
+                      e.books.map((arg) => {
                         if (this.state.searchresult.indexOf(arg.title) != -1){
                           return (
                           <div className="book">
@@ -123,7 +118,8 @@ class BooksApp extends React.Component {
               </ol>
             </div>
           </div>
-        ) : (
+        )}/>
+        <Route path="/" exact render={() => (
           <div className="list-books">
             <div className="list-books-title">
               <h1>MyReads</h1>
@@ -167,10 +163,10 @@ class BooksApp extends React.Component {
             </div>
             </div>
             <div className="open-search">
-              <button onClick={this.handleChangeSearchPage.bind(this)}>Add a book</button>
+              <Link to="/search"><button onClick={this.handleChangeSearchPage.bind(this)}>Add a book</button></Link>
             </div>
           </div>
-        )}
+        )}/>
       </div>
     )
   }
