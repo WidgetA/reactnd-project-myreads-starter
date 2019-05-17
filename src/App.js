@@ -1,74 +1,86 @@
 import React from 'react'
-// import * as BooksAPI from './BooksAPI'
+import * as BooksAPI from './BooksAPI'
 import './App.css'
-import Books from './Books.json'
 import { Link } from 'react-router-dom'
 import { Route } from "react-router-dom"
 
 class BooksApp extends React.Component {
 
-  state = (() => {
-    if (localStorage.getItem("cache")) {
-      return (JSON.parse(localStorage.getItem("cache")))
-    } else {
-      return (Books)
-    }
-  })();
- 
+  state = {
+    books: [],
+    shelf: [],
+    results: []
+  }
+  componentDidMount() {
+    BooksAPI.getAll().then(res => {
+      this.setState({books: res})
+      const shelf = []
+      this.state.books.forEach((book) => {
+        if (shelf.indexOf(book.shelf) != -1) {
+          ;
+        } else {
+          shelf.push(book.shelf)
+        }
+      })
+      this.setState({shelf: shelf})
+    });
+  }
 
   handleChange(args, event) {
     var shelf = args.shelf;
-    var title = args.title;
-    var book;
+    var id = args.id;
+    let book;
 
-    this.state.shelf.forEach(function(e) {
-      if (e.value === shelf) {
-        e.books.forEach( function(b) { 
-          if (b.title === title) {
-            book = b
-          } else;
-        })
-        e.books = e.books.filter(item=>item !== book)
-      } else ;
-    });
-    
-    this.state.shelf.forEach(function(e) {
-      if (e.value === event.target.value) {
-        e.books.push(book)
-      } else ;
-    });
-    
-    localStorage.setItem("cache",JSON.stringify(this.state))
+    if (event.target.value == "none") {
+      this.state.books.forEach( function(e) {
+        if (id == e.id) {
+          book = e
+        } else ;
+      });
+      this.state.books = this.state.books.filter(item => item !== book)
+    } else {
+      this.state.books.forEach( function(e) {
+        if (id == e.id) {
+          e.shelf = event.target.value
+          BooksAPI.update(e, event.target.value)
+        } else ;
+      });
+    }
+
     this.setState(this.state)
   }
 
-  handleChangeSearchPage() {
-    const books = []
-    this.state.shelf.forEach(function(e) {
-      e.books.forEach( function(b) {
-        books.push(b.title)
-      });
-    });
-    this.setState({ booklist: books })  
-  }
-
   handleChangeSearch(event){
-    let books = [];
-    this.state.booklist.forEach( function(e) {
-      if (event.target.value) {
-        if (e.match(event.target.value + '+')) {
-          books.push(e.match(event.target.value + '+')['input'])
-        } else ;
-      } else {
-        books = []
-      }
-    });
-    this.setState({ searchresult: books })
-  }
-  clearSearchResult(){
-    this.setState({ searchresult: [] })
+    BooksAPI.search(event.target.value)
+      .then(res => {
+        if (res){
+          if (res.error) {
+            this.setState({results: []});
+          } else {
+            this.setState({results: res})
+          }
+        } else {
+          this.setState({results: []});
+        }
+      })
   }
 
+  clearSearchResult(){
+    this.setState({ results: [] })
+  }
+
+  handleChangeAdd(args, event) {
+    var id = args.id;
+    var shelf = event.target.value;
+
+    BooksAPI.get(id)
+      .then(data => {
+        Object.assign(data, {shelf: shelf})
+        BooksAPI.update(data, shelf)
+        this.state.books.push(data)
+        this.setState(this.state)
+      })
+  }
 
   render() {
     return (
@@ -83,38 +95,69 @@ class BooksApp extends React.Component {
             </div>
             <div className="search-books-results">
               <ol className="books-grid">
-                {this.state.shelf.map((e) => {
-                  if (this.state.searchresult){
-                    return (
-                      e.books.map((arg) => {
-                        if (this.state.searchresult.indexOf(arg.title) != -1){
-                          return (
-                          <div className="book">
-                            <div className="book-top">
-                              <div className="book-cover" style={{width: arg.width, 
-                                                                height: arg.height,
-                                                                backgroundImage:"url("+arg.imgurl+")"}}>
-                              </div>
-                              <div className="book-shelf-changer">
-                                <select onChange={this.handleChange.bind(this, {title:arg.title, shelf:e.value})} defaultValue="" value={e.value}>
-                                  <option value="move" disabled>Move to...</option>
-                                  <option value="currentlyReading">Currently Reading</option>
-                                  <option value="wantToRead">Want to Read</option>
-                                  <option value="read">Read</option>
-                                  <option value="none">None</option>
-                                </select>
-                              </div>
+                {
+                  this.state.results.map((e) => {
+                    if (e.imageLinks) {
+                      return(
+                      <div className="book">
+                          <div className="book-top">
+                            <div className="book-cover" style={{width: 128, 
+                                                               height: 193, 
+                                                               backgroundImage:"url("+e.imageLinks.smallThumbnail+")"}}>
                             </div>
-                            <div className="book-title">{arg.title}</div>
-                            <div className="book-authors">{arg.author}</div>
-                          </div>)
-                        } else ;
-                        
-                      })
-                  )
-                  } else ;
-                  }
-                )}
+                            <div className="book-shelf-changer">
+                              <select onChange={this.handleChangeAdd.bind(this, {id:e.id})} defaultValue="" value="none">
+                                <option value="move" disabled>Move to...</option>
+                                <option value="currentlyReading">Currently Reading</option>
+                                <option value="wantToRead">Want to Read</option>
+                                <option value="read">Read</option>
+                                <option value="none">None</option>
+                              </select>
+                            </div>
+                          </div>
+                            <div className="book-title">{e.title}</div>
+                            {
+                              () =>{
+                                if (e.authors) {
+                                  e.authors.map((author) =>{
+                                    return(<div className="book-authors">{author}</div>)
+                                  })
+                                }
+                              }
+                            }
+                      </div>)
+                    } else {
+                      return(
+                        <div className="book">
+                          <div className="book-top">
+                            <div className="book-cover" style={{width: 128, 
+                                                               height: 193, 
+                                                               backgroundImage:""}}>
+                            </div>
+                            <div className="book-shelf-changer">
+                              <select onChange={this.handleChangeAdd.bind(this, {id:e.id})} defaultValue="" value="none">
+                                <option value="move" disabled>Move to...</option>
+                                <option value="currentlyReading">Currently Reading</option>
+                                <option value="wantToRead">Want to Read</option>
+                                <option value="read">Read</option>
+                                <option value="none">None</option>
+                              </select>
+                            </div>
+                          </div>
+                            <div className="book-title">{e.title}</div>
+                            {
+                              () =>{
+                                if (e.authors) {
+                                  e.authors.map((author) =>{
+                                    return(<div className="book-authors">{author}</div>)
+                                  })
+                                }
+                              }
+                            }
+                      </div>)
+                    };                 
+                  })
+                }
               </ol>
             </div>
           </div>
@@ -124,46 +167,63 @@ class BooksApp extends React.Component {
             <div className="list-books-title">
               <h1>MyReads</h1>
             </div>
-            <div className="list-books-content">
-            <div>
-              {this.state.shelf.map((e) => {
+            <div className="  list-books-content">
+              <div>
+                {
+                  this.state.shelf.map((e) => {
                   return (
                     <div className="bookshelf">
-                      <h2 className="bookshelf-title">{e.name}</h2>
+                      <h2 className="bookshelf-title">
+                      {
+                        (() => {
+                          switch (e) {
+                            case "currentlyReading":   return "Currently Reading";
+                            case "wantToRead": return "Want to Read";
+                            case "read":  return "Read";
+                          }
+                        })()
+                      }
+                      </h2>
                       <div className="bookshelf-books">
                         <ol className="books-grid">
-                          {e.books.map((arg) => {
-                            return (
-                            <li>
-                              <div className="book">
-                                <div className="book-top">
-                                  <div className="book-cover" style={{width: arg.width, 
-                                                                    height: arg.height,
-                                                                    backgroundImage:"url("+arg.imgurl+")"}}>
-                                  </div>
-                                  <div className="book-shelf-changer">
-                                    <select onChange={this.handleChange.bind(this, {title:arg.title, shelf:e.value})} defaultValue="" value={e.value}>
-                                      <option value="move" disabled>Move to...</option>
-                                      <option value="currentlyReading">Currently Reading</option>
-                                      <option value="wantToRead">Want to Read</option>
-                                      <option value="read">Read</option>
-                                      <option value="none">None</option>
-                                    </select>
-                                  </div>
-                                </div>
-                                <div className="book-title">{arg.title}</div>
-                                <div className="book-authors">{arg.author}</div>
-                              </div>
-                            </li>)
-                          })}
+                          {
+                            this.state.books.map((arg) => {
+                              if (arg.shelf == e) {
+                                return(
+                                  <li>
+                                    <div className="book">
+                                      <div className="book-top">
+                                        <div className="book-cover" style={{width: 128, height: 193, backgroundImage:"url("+arg.imageLinks.smallThumbnail+")"}}>
+                                        </div>
+                                        <div className="book-shelf-changer">
+                                          <select onChange={this.handleChange.bind(this, {id:arg.id, shelf:e})} defaultValue="" value={e}>
+                                            <option value="move" disabled>Move to...</option>
+                                            <option value="currentlyReading">Currently Reading</option>
+                                            <option value="wantToRead">Want to Read</option>
+                                            <option value="read">Read</option>
+                                            <option value="none">None</option>
+                                          </select>
+                                        </div>
+                                      </div>
+                                      <div className="book-title">{arg.title}</div>
+                                      {arg.authors.map((author) =>{
+                                        return(<div className="book-authors">{author}</div>)
+                                      })}
+                                    </div>
+                                  </li>)
+                              } else;
+                            })
+                          } 
                         </ol>
                       </div>
                     </div>
-                )})}
-            </div>
+                    )
+                  })
+                }
+              </div>
             </div>
             <div className="open-search">
-              <Link to="/search"><button onClick={this.handleChangeSearchPage.bind(this)}>Add a book</button></Link>
+              <Link to="/search"><button>Add a book</button></Link>
             </div>
           </div>
         )}/>
