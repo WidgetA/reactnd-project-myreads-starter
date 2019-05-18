@@ -35,6 +35,7 @@ class BooksApp extends React.Component {
       this.state.books.forEach( function(e) {
         if (id == e.id) {
           book = e
+          BooksAPI.update(e, event.target.value)
         } else ;
       });
       this.state.books = this.state.books.filter(item => item !== book)
@@ -82,6 +83,18 @@ class BooksApp extends React.Component {
       })
   }
 
+  checkValue(id){
+    let value = "none"
+    this.state.books.forEach( function(e) {
+      if (e.id == id) {
+        value = e.shelf
+      } else {
+        ;
+      }
+    });
+    return value
+  }
+
   render() {
     return (
       <div className="app">
@@ -106,7 +119,7 @@ class BooksApp extends React.Component {
                                                                backgroundImage:"url("+e.imageLinks.smallThumbnail+")"}}>
                             </div>
                             <div className="book-shelf-changer">
-                              <select onChange={this.handleChangeAdd.bind(this, {id:e.id})} defaultValue="" value="none">
+                              <select onChange={this.handleChangeAdd.bind(this, {id:e.id})} defaultValue="" value={this.checkValue(e.id)}>
                                 <option value="move" disabled>Move to...</option>
                                 <option value="currentlyReading">Currently Reading</option>
                                 <option value="wantToRead">Want to Read</option>
